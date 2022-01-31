@@ -8,18 +8,18 @@ with paid_orders as (
         p.payment_finalized_date,
         c.first_name as customer_first_name,
         c.last_name as customer_last_name
-from dbt_refactoring.dbt_tung.orders as orders
+from {{source('dbt_tung','orders')}} as orders
 left join (
     select 
         orderid as order_id, 
         max(created) as payment_finalized_date, 
         sum(amount) / 100.0 as total_amount_paid
-        from dbt_refactoring.dbt_tung.payments
+        from {{source('dbt_tung','payments')}}
     where status <> 'fail'
     group by 1
 ) p 
     on orders.id = p.order_id
-left join dbt_refactoring.dbt_tung.customers c 
+left join {{source('dbt_tung','customers')}} c 
     on orders.user_id = c.id )
 
 ,customer_orders as (
@@ -28,8 +28,8 @@ left join dbt_refactoring.dbt_tung.customers c
         , min(order_date) as first_order_date
         , max(order_date) as most_recent_order_date
         , count(orders.id) as number_of_orders
-from dbt_refactoring.dbt_tung.customers c 
-left join dbt_refactoring.dbt_tung.orders as orders
+from {{source('dbt_tung','customers')}} c 
+left join {{source('dbt_tung','orders')}} as orders
     on orders.user_id = c.id 
 group by 1
 )
