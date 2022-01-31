@@ -1,4 +1,26 @@
-with paid_orders as (
+with 
+---Import
+import_orders as (
+    select
+        *
+    from {{source('dbt_tung','orders')}}
+)
+, import_customers as (
+    select
+        *
+    from {{source('dbt_tung','customers')}}
+)
+
+, import_payments as (
+    select
+        *
+    from {{source('dbt_tung','payments')}}
+    where 1=1
+    and status <> 'fail'
+)
+
+---Logical
+, paid_orders as (
     select 
         orders.id as order_id,
         orders.user_id	as customer_id,
@@ -8,32 +30,32 @@ with paid_orders as (
         p.payment_finalized_date,
         c.first_name as customer_first_name,
         c.last_name as customer_last_name
-from {{source('dbt_tung','orders')}} as orders
+from import_orders as orders
 left join (
     select 
         orderid as order_id, 
         max(created) as payment_finalized_date, 
         sum(amount) / 100.0 as total_amount_paid
-        from {{source('dbt_tung','payments')}}
-    where status <> 'fail'
+        from import_payments
     group by 1
 ) p 
     on orders.id = p.order_id
-left join {{source('dbt_tung','customers')}} c 
-    on orders.user_id = c.id )
+left join import_customers c 
+    on orders.user_id = c.id 
+)
 
-,customer_orders as (
-    select 
+, customer_orders as (
+    select
         c.id as customer_id
         , min(order_date) as first_order_date
         , max(order_date) as most_recent_order_date
         , count(orders.id) as number_of_orders
-from {{source('dbt_tung','customers')}} c 
-left join {{source('dbt_tung','orders')}} as orders
+from import_customers c 
+left join import_orders as orders
     on orders.user_id = c.id 
 group by 1
 )
-
+---Final
 select
     p.*,
     row_number() over (order by p.order_id) as transaction_seq,
@@ -60,3 +82,7 @@ left outer join (
 ) x 
     on x.order_id = p.order_id
 order by order_id
+---Simple Select
+
+
+
