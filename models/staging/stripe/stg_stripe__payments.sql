@@ -13,11 +13,23 @@ with import_payments as (
             , 'status'
             , 'amount'
             , 'created'
-        ])}} as stg_strip__payments_id
+        ])}} as stg_stripe__payments_id
         , *
     from import_payments
 )
 
+, rename_fields as (
+    select
+        stg_stripe__payments_id
+        , id as payment_id
+        , orderid as order_id
+        , paymentmethod as payment_method
+        , status as payment_status
+        , amount as payment_amount
+        , created as payment_created_at
+    from add_surrogate_key
+)
+
 select
     *
-from add_surrogate_key
+from rename_fields

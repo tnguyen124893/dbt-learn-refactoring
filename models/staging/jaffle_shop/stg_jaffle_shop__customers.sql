@@ -14,6 +14,15 @@ with import_customers as (
     from import_customers
 )
 
+, rename_fields as (
+    select
+        stg_jaffle_shop__customers_id
+        , id as customer_id
+        , first_name as customer_first_name
+        , last_name as customer_last_name
+    from add_surrogate_key
+)
+
 select
     *
-from add_surrogate_key
+from rename_fields
