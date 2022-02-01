@@ -19,6 +19,15 @@ import_orders as (
     and status <> 'fail'
 )
 
+, total_payments as (
+    select 
+        orderid as order_id, 
+        max(created) as payment_finalized_date, 
+        sum(amount) / 100.0 as total_amount_paid
+    from import_payments
+    group by 1
+)
+
 ---Logical
 , paid_orders as (
     select 
@@ -31,14 +40,7 @@ import_orders as (
         c.first_name as customer_first_name,
         c.last_name as customer_last_name
     from import_orders as orders
-    left join (
-        select 
-            orderid as order_id, 
-            max(created) as payment_finalized_date, 
-            sum(amount) / 100.0 as total_amount_paid
-        from import_payments
-        group by 1
-        ) p 
+    left join total_payments p 
         on orders.id = p.order_id
     left join import_customers c 
         on orders.user_id = c.id 
@@ -53,6 +55,17 @@ import_orders as (
     from import_customers c 
     left join import_orders as orders
         on orders.user_id = c.id 
+    group by 1
+)
+
+, customer_lifetime_value as (
+    select
+        p.order_id,
+        sum(t2.total_amount_paid) as clv_bad
+    from paid_orders p
+    left join paid_orders t2 
+        on p.customer_id = t2.customer_id 
+        and p.order_id >= t2.order_id
     group by 1
 )
 ---Final
@@ -70,19 +83,8 @@ import_orders as (
     from paid_orders p
     left join customer_orders as c 
         using (customer_id)
-    left outer join (
-        select
-            p.order_id,
-            sum(t2.total_amount_paid) as clv_bad
-        from paid_orders p
-        left join paid_orders t2 
-            on p.customer_id = t2.customer_id 
-            and p.order_id >= t2.order_id
-        group by 1
-        order by p.order_id
-    ) x 
+    left outer join customer_lifetime_value x 
         on x.order_id = p.order_id
-    order by order_id
 )
 ---Simple Select
 select
