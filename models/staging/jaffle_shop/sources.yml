@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: dbt_tung
+    database: dbt_refactoring
+    quoting:
+      database: false
+      schema: false
+      identifier: false
+    tables:
+      - name: customers
+      - name: orders
